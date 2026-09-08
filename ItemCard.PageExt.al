@@ -1,14 +1,15 @@
-pageextension 50101 "Item Card Extension TEST" extends "Item Card"
+pageextension 50101 "Item Card Extension " extends "Item Card"
 {
     layout
     {
         addlast(content)
         {
-            group(TestGroup)
+            group(ItemIngredients)
             {
-                Caption = 'Test';
+                Caption = 'Item Ingredients';
+                Visible = ShowGroup;
 
-                group(TestRawMaterial)
+                group(RawMaterial)
                 {
                     Caption = 'Raw Material';
 
@@ -23,7 +24,7 @@ pageextension 50101 "Item Card Extension TEST" extends "Item Card"
                     field("Raw Material 9"; Rec."Raw Material 9") { ApplicationArea = All; ToolTip = 'Specifies raw material 9 for the item.'; }
                 }
 
-                group(TestYield)
+                group(Yield)
                 {
                     Caption = 'Yield';
 
@@ -40,4 +41,29 @@ pageextension 50101 "Item Card Extension TEST" extends "Item Card"
             }
         }
     }
+
+    trigger OnAfterGetRecord()
+    begin
+        ShowGroup := not IsMaterialItem(Rec."No.");
+    end;
+
+    local procedure IsMaterialItem(ItemNo: Code[20]): Boolean
+    var
+        HiddenPrefixes: List of [Text];
+        Prefix: Text;
+        UpperItemNo: Text;
+    begin
+        HiddenPrefixes.Add('RM');
+        HiddenPrefixes.Add('PKG');
+        HiddenPrefixes.Add('ING');
+
+        UpperItemNo := UpperCase(ItemNo);
+        foreach Prefix in HiddenPrefixes do
+            if UpperItemNo.StartsWith(Prefix) then
+                exit(true);
+        exit(false);
+    end;
+
+    var
+        ShowGroup: Boolean;
 }
