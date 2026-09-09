@@ -43,27 +43,38 @@ pageextension 50101 "Item Card Extension " extends "Item Card"
     }
 
     trigger OnAfterGetRecord()
+    var
+        SyncedValues: Boolean;
     begin
-        ShowGroup := not IsMaterialItem(Rec."No.");
+        // Inline prefix check so the Item Card always opens, even if the user has
+        // not been granted execute permission on codeunit "Item Raw Material Mgt.".
+        ShowGroup := not IsMaterialItemNo(Rec."No.");
+
+        if ShowGroup and (Rec."No." <> '') and (Rec."No." <> LastSyncedItemNo) then begin
+            LastSyncedItemNo := Rec."No.";
+            // Wrapped: a permission / data problem degrades to "no refresh",
+            // it does not stop the card from opening.
+            if TrySyncItem(Rec."No.", SyncedValues) and SyncedValues then
+                CurrPage.Update(false);
+        end;
     end;
 
-    local procedure IsMaterialItem(ItemNo: Code[20]): Boolean
+    [TryFunction]
+    local procedure TrySyncItem(ItemNo: Code[20]; var Updated: Boolean)
+    begin
+        Updated := RawMatMgt.SyncItem(ItemNo);
+    end;
+
+    local procedure IsMaterialItemNo(ItemNo: Code[20]): Boolean
     var
-        HiddenPrefixes: List of [Text];
-        Prefix: Text;
         UpperItemNo: Text;
     begin
-        HiddenPrefixes.Add('RM');
-        HiddenPrefixes.Add('PKG');
-        HiddenPrefixes.Add('ING');
-
         UpperItemNo := UpperCase(ItemNo);
-        foreach Prefix in HiddenPrefixes do
-            if UpperItemNo.StartsWith(Prefix) then
-                exit(true);
-        exit(false);
+        exit(UpperItemNo.StartsWith('RM') or UpperItemNo.StartsWith('ING') or UpperItemNo.StartsWith('PKG'));
     end;
 
     var
+        RawMatMgt: Codeunit "Item Raw Material Mgt.";
         ShowGroup: Boolean;
+        LastSyncedItemNo: Code[20];
 }
